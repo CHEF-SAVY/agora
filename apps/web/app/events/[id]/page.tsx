@@ -1,12 +1,9 @@
-"use client";
-
 import Image from "next/image";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { dataEvents } from "@/components/events/mockups";
 import { RegistrationBox } from "@/components/events/registration-box";
 import { notFound } from "next/navigation";
-import React, { use } from "react";
 import dynamic from "next/dynamic";
 
 const Map = dynamic(() => import("@/components/events/event-location-map"), {
@@ -20,12 +17,12 @@ const Map = dynamic(() => import("@/components/events/event-location-map"), {
   ),
 });
 
-export default function EventDetailPage({
+export default async function EventDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = use(params);
+  const { id } = await params;
   const eventId = parseInt(id);
   const event = dataEvents.find((e) => e.id === eventId);
 
