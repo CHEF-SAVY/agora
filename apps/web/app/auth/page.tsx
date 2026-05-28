@@ -63,7 +63,7 @@ export default function AuthPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#A9A495] relative flex items-center justify-center">
+    <main className="min-h-screen bg-sand relative flex items-center justify-center">
       {/* Back Button */}
       <Button
         type="button"
@@ -114,7 +114,21 @@ export default function AuthPage() {
             type="submit"
             variant="primary"
             disabled={isLoading}
-            className="w-full mb-4 py-2"
+            className="
+              w-full
+              bg-accent
+              hover:bg-accent-hover
+              rounded-full
+              py-2
+              font-medium
+              flex items-center justify-center gap-2
+              mb-4
+              border-2 border-black
+              shadow-[0_4px_0_#000]
+              active:translate-y-[2px]
+              active:shadow-[0_2px_0_#000]
+              transition
+            "
           >
             Continue with Email
             <Image src="/icons/arrow-right.svg" alt="Arrow" width={16} height={16} />
@@ -122,9 +136,20 @@ export default function AuthPage() {
 
           <Button
             type="button"
-            variant="dark"
-            onClick={() => { window.location.href = '/api/auth/google'; }}
-            className="w-full mb-3 py-2"
+            onClick={() => router.push("/api/auth/google")}
+            className="
+              w-full
+              bg-black
+              text-white
+              rounded-full
+              py-2
+              flex items-center justify-center gap-2
+              mb-3
+              border-2 border-black
+              shadow-[0_4px_0_#000]
+              active:translate-y-[2px]
+              active:shadow-[0_2px_0_#000]
+            "
           >
             <Image src="/icons/google.svg" alt="Google" width={16} height={16} />
             Sign in with Google
@@ -132,9 +157,19 @@ export default function AuthPage() {
 
           <Button
             type="button"
-            variant="dark"
-            onClick={() => { window.location.href = '/api/auth/apple'; }}
-            className="w-full py-2"
+            onClick={() => router.push("/api/auth/apple")}
+            className="
+              w-full
+              bg-black
+              text-white
+              rounded-full
+              py-2
+              flex items-center justify-center gap-2
+              border-2 border-black
+              shadow-[0_4px_0_#000]
+              active:translate-y-[2px]
+              active:shadow-[0_2px_0_#000]
+            "
           >
             <Image src="/icons/apple.svg" alt="Apple" width={16} height={16} />
             Sign in with Apple
