@@ -838,6 +838,14 @@ mod tests {
         };
         assert_eq!(params.location.as_deref(), Some("Lagos"));
     }
+
+    #[test]
+    fn test_event_counts_serialization() {
+        let counts = EventCounts { total: 100, upcoming: 20 };
+        let json = serde_json::to_value(&counts).unwrap();
+        assert_eq!(json["total"], 100);
+        assert_eq!(json["upcoming"], 20);
+    }
 }
 
 #[derive(Serialize)]
@@ -942,6 +950,61 @@ pub async fn get_ratings_summary(
     }
 
     success(summary, "Ratings summary retrieved").into_response()
+}
+
+const EVENT_COUNT_CACHE_KEY: &str = "events:count";
+const EVENT_COUNT_CACHE_TTL: Duration = Duration::from_secs(600);
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct EventCounts {
+    pub total: i64,
+    pub upcoming: i64,
+}
+
+/// GET /api/v1/events/count
+///
+/// Returns the total and upcoming event counts, excluding flagged events.
+/// Result is cached in Redis for 10 minutes.
+pub async fn get_event_counts(State(mut state): State<EventState>) -> Response {
+    match state.redis.get::<EventCounts>(EVENT_COUNT_CACHE_KEY).await {
+        Ok(Some(counts)) => return success(counts, "Event counts retrieved (cached)").into_response(),
+        Ok(None) => {}
+        Err(e) => tracing::warn!("Redis error for event counts cache: {:?}", e),
+    }
+
+    let total = match sqlx::query_scalar::<_, i64>(
+        "SELECT COUNT(*) FROM events WHERE is_flagged = FALSE",
+    )
+    .fetch_one(&state.pool)
+    .await
+    {
+        Ok(n) => n,
+        Err(e) => {
+            tracing::error!("Failed to count events: {:?}", e);
+            return AppError::DatabaseError(e).into_response();
+        }
+    };
+
+    let upcoming = match sqlx::query_scalar::<_, i64>(
+        "SELECT COUNT(*) FROM events WHERE end_time > NOW() AND is_flagged = FALSE",
+    )
+    .fetch_one(&state.pool)
+    .await
+    {
+        Ok(n) => n,
+        Err(e) => {
+            tracing::error!("Failed to count upcoming events: {:?}", e);
+            return AppError::DatabaseError(e).into_response();
+        }
+    };
+
+    let counts = EventCounts { total, upcoming };
+
+    if let Err(e) = state.redis.set(EVENT_COUNT_CACHE_KEY, &counts, EVENT_COUNT_CACHE_TTL).await {
+        tracing::warn!("Failed to cache event counts: {:?}", e);
+    }
+
+    success(counts, "Event counts retrieved").into_response()
 }
 
 /// GET /api/v1/events/:id/check-in-stats
