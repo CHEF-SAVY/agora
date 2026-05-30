@@ -9,6 +9,9 @@ mod test;
 mod types;
 mod validation;
 
+#[cfg(test)]
+mod test;
+
 pub use contract::*;
 pub use error::*;
 pub use events::*;

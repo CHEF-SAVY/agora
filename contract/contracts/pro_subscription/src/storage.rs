@@ -56,6 +56,9 @@ pub fn set_payment_token(env: &Env, token: &Address) {
     env.storage().instance().set(&DataKey::PaymentToken, token);
     env.storage()
         .instance()
+        .set(&DataKey::PaymentToken, token);
+    env.storage()
+        .instance()
         .extend_ttl(INSTANCE_LIFETIME_THRESHOLD, INSTANCE_BUMP_AMOUNT);
 }
 
