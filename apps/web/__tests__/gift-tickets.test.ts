@@ -248,7 +248,6 @@ describe('Gift Tickets Feature', () => {
     });
 
     it('should apply per-user limits to recipient, not buyer', async () => {
-      const maxPerUser = 5;
       const recipientCurrentCount = 4;
       
       // Recipient already has 4 tickets, max is 5
@@ -391,7 +390,6 @@ async function mockFindRegularTickets(): Promise<Ticket[]> {
 function mockRenderTicketModal() {
   let giftMode = false;
   let recipientWallet = '';
-  let purchased = false;
 
   return {
     hasGiftModeToggle: true,
@@ -431,18 +429,18 @@ function mockRenderTicketModal() {
   };
 }
 
-async function mockGetUserInventory(userWallet: string, eventId: string): Promise<number> {
+async function mockGetUserInventory(_userWallet: string, _eventId: string): Promise<number> {
   return 0;
 }
 
-async function mockSetUserTicketCount(userWallet: string, eventId: string, count: number): Promise<void> {
+async function mockSetUserTicketCount(_userWallet: string, _eventId: string, _count: number): Promise<void> {
   // Mock implementation
 }
 
-async function mockGetWalletBalance(wallet: string): Promise<number> {
+async function mockGetWalletBalance(_wallet: string): Promise<number> {
   return 1000; // Mock balance
 }
 
-async function mockRefundTicket(ticketId: string): Promise<void> {
+async function mockRefundTicket(_ticketId: string): Promise<void> {
   // Mock implementation
 }

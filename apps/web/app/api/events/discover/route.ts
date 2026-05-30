@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma, type Event, type Prisma } from "@/lib/prisma";
+import { prisma, type Event } from "@/lib/prisma";
 import { withErrorHandler } from "@/lib/api-handler";
 
 export const dynamic = "force-dynamic";

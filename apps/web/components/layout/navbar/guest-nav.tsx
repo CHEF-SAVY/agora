@@ -32,37 +32,6 @@ const GUEST_NAV_ITEMS: NavItem[] = [
   },
 ];
 
-      <div className="hidden lg:flex items-center flex-1 gap-[170px]">
-        <div className="flex items-center gap-[25px]">
-          <NavLink
-            href="/discover"
-            icon="/icons/earth.svg"
-            text="Discover Events"
-            isActive={pathname === "/discover" || pathname.startsWith("/events")}
-            ariaLabel="Discover Events"
-          />
-          <NavLink
-            href="/pricing"
-            icon="/icons/dollar-circle.svg"
-            text="Pricing"
-            isActive={pathname === "/pricing"}
-            ariaLabel="Pricing"
-          />
-          <NavLink
-            href="/stellar"
-            icon="/icons/stellar-xlm-logo 1.svg"
-            text="Stellar Ecosystem"
-            isActive={pathname === "/stellar"}
-            ariaLabel="Stellar Ecosystem"
-          />
-          <NavLink
-            href="/faqs"
-            icon="/icons/help-circle.svg"
-            text="FAQs"
-            isActive={pathname === "/faqs"}
-            ariaLabel="Frequently Asked Questions"
-          />
-        </div>
 const guestCta = (
   <Link href="/auth" title="Sign in to create an event">
     <Button

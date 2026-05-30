@@ -32,39 +32,6 @@ const USER_NAV_ITEMS: NavItem[] = [
   },
 ];
 
-        <div className="hidden lg:flex items-center gap-[53px]">
-          <div className="flex items-center gap-6">
-            <NavLink
-              href="/"
-              icon="/icons/home.svg"
-              text="Home"
-              isActive={pathname === "/"}
-              ariaLabel="Home"
-            />
-            <NavLink
-              href="/discover"
-              icon="/icons/earth-yellow.svg"
-              text="Discover Events"
-              isActive={
-                pathname === "/discover" || pathname.startsWith("/events")
-              }
-              ariaLabel="Discover Events"
-            />
-            <NavLink
-              href="/organizers"
-              icon="/icons/user-group.svg"
-              text="Organizers"
-              isActive={pathname === "/organizers"}
-              ariaLabel="Organizers"
-            />
-            <NavLink
-              href="/stellar"
-              icon="/icons/stellar-xlm-logo 1.svg"
-              text="Stellar Ecosystem"
-              isActive={pathname === "/stellar"}
-              ariaLabel="Stellar Ecosystem"
-            />
-          </div>
 const userCta = (
   <Link href="/create-event">
     <Button
