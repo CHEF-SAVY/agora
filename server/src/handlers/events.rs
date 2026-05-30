@@ -11,7 +11,7 @@ use axum::{
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::{Row, PgPool};
+use sqlx::{PgPool, Row};
 use std::time::Duration;
 use uuid::Uuid;
 
@@ -364,6 +364,85 @@ pub async fn get_event(
     }
 
     success(detail, "Event retrieved successfully").into_response()
+}
+
+/// Request body for creating a new event
+#[derive(Debug, Deserialize)]
+pub struct CreateEventRequest {
+    pub organizer_id: Uuid,
+    pub title: String,
+    pub description: Option<String>,
+    pub location: String,
+    pub start_time: DateTime<Utc>,
+    pub end_time: Option<DateTime<Utc>>,
+}
+
+/// Create a new event and warm up the Redis cache for `GET /api/v1/events/:id`.
+///
+/// # Endpoint
+/// POST `/api/v1/events`
+pub async fn create_event(
+    State(mut state): State<EventState>,
+    Json(payload): Json<CreateEventRequest>,
+) -> Response {
+    let event = match sqlx::query_as::<_, Event>(
+        "INSERT INTO events (organizer_id, title, description, location, start_time, end_time)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         RETURNING *",
+    )
+    .bind(payload.organizer_id)
+    .bind(&payload.title)
+    .bind(&payload.description)
+    .bind(&payload.location)
+    .bind(payload.start_time)
+    .bind(payload.end_time)
+    .fetch_one(&state.pool)
+    .await
+    {
+        Ok(e) => e,
+        Err(e) => {
+            tracing::error!("Failed to create event: {:?}", e);
+            return AppError::DatabaseError(e).into_response();
+        }
+    };
+
+    // Cache warm-up: pre-populate event:detail:{id} so the first GET hits cache.
+    let organizer_profile = match sqlx::query_scalar::<_, Option<String>>(
+        "SELECT wallet_address FROM organizers WHERE id = $1",
+    )
+    .bind(event.organizer_id)
+    .fetch_optional(&state.pool)
+    .await
+    {
+        Ok(Some(Some(wallet))) => {
+            match sqlx::query_as::<_, OrganizerProfile>(
+                "SELECT * FROM organizer_profiles WHERE address = $1",
+            )
+            .bind(&wallet)
+            .fetch_optional(&state.pool)
+            .await
+            {
+                Ok(profile) => profile,
+                Err(e) => {
+                    tracing::warn!("Cache warm-up: failed to fetch organizer profile: {:?}", e);
+                    None
+                }
+            }
+        }
+        _ => None,
+    };
+
+    let detail = EventDetail {
+        event: event.clone(),
+        organizer_profile,
+    };
+
+    let cache_key = format!("event:detail:{}", event.id);
+    if let Err(e) = state.redis.set(&cache_key, &detail, EVENT_CACHE_TTL).await {
+        tracing::warn!("Cache warm-up failed for event {}: {:?}", event.id, e);
+    }
+
+    success(event, "Event created successfully").into_response()
 }
 
 /// Record a star rating for an event.
@@ -838,6 +917,31 @@ mod tests {
         };
         assert_eq!(params.location.as_deref(), Some("Lagos"));
     }
+
+    #[test]
+    fn test_create_event_request_fields() {
+        let organizer_id = Uuid::new_v4();
+        let start = chrono::Utc::now();
+        let req = CreateEventRequest {
+            organizer_id,
+            title: "Test Event".to_string(),
+            description: Some("A description".to_string()),
+            location: "Lagos".to_string(),
+            start_time: start,
+            end_time: None,
+        };
+        assert_eq!(req.organizer_id, organizer_id);
+        assert_eq!(req.title, "Test Event");
+        assert_eq!(req.location, "Lagos");
+        assert!(req.end_time.is_none());
+    }
+
+    #[test]
+    fn test_cache_key_format() {
+        let id = Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").unwrap();
+        let key = format!("event:detail:{}", id);
+        assert_eq!(key, "event:detail:550e8400-e29b-41d4-a716-446655440000");
+    }
 }
 
 #[derive(Serialize)]
@@ -873,19 +977,18 @@ pub async fn get_ratings_summary(
     }
 
     // 404 if event doesn't exist
-    let exists = match sqlx::query_scalar::<_, bool>(
-        "SELECT EXISTS(SELECT 1 FROM events WHERE id = $1)",
-    )
-    .bind(event_id)
-    .fetch_one(&state.pool)
-    .await
-    {
-        Ok(v) => v,
-        Err(e) => {
-            tracing::error!("Failed to check event existence: {:?}", e);
-            return AppError::DatabaseError(e).into_response();
-        }
-    };
+    let exists =
+        match sqlx::query_scalar::<_, bool>("SELECT EXISTS(SELECT 1 FROM events WHERE id = $1)")
+            .bind(event_id)
+            .fetch_one(&state.pool)
+            .await
+        {
+            Ok(v) => v,
+            Err(e) => {
+                tracing::error!("Failed to check event existence: {:?}", e);
+                return AppError::DatabaseError(e).into_response();
+            }
+        };
 
     if !exists {
         return AppError::NotFound(format!("Event with id '{}' not found", event_id))
@@ -929,11 +1032,7 @@ pub async fn get_ratings_summary(
         distribution,
     };
 
-    if let Err(e) = state
-        .redis
-        .set(&cache_key, &summary, EVENT_CACHE_TTL)
-        .await
-    {
+    if let Err(e) = state.redis.set(&cache_key, &summary, EVENT_CACHE_TTL).await {
         tracing::warn!(
             "Failed to cache ratings summary for event {}: {:?}",
             event_id,
@@ -980,4 +1079,3 @@ pub async fn get_checkin_stats(
         Err(e) => AppError::InternalServerError(e.to_string()).into_response(),
     }
 }
-
