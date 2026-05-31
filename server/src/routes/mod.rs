@@ -137,6 +137,7 @@ pub async fn create_routes(pool: PgPool, _config: Config, redis: RedisCache) -> 
         .route("/:id/rate", post(submit_event_rating))
         .route("/:id/check-in-stats", get(get_checkin_stats))
         .route("/:id/ratings/summary", get(get_ratings_summary))
+        .route("/:id/revenue", get(get_event_revenue))
         .with_state(event_state);
 
     // Category routes
